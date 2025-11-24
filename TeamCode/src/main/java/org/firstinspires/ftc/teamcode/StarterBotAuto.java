@@ -149,6 +149,7 @@ public class StarterBotAuto extends OpMode
      * Here is our auto state machine enum. This captures each action we'd like to do in auto.
      */
     private enum AutonomousState {
+        BACK_UP,
         LAUNCH,
         WAIT_FOR_LAUNCH,
         DRIVING_AWAY_FROM_GOAL,
@@ -182,7 +183,7 @@ public class StarterBotAuto extends OpMode
          * Later in our code, we will progress through the state machine by moving to other enum members.
          * We do the same for our launcher state machine, setting it to IDLE before we use it later.
          */
-        autonomousState = AutonomousState.LAUNCH;
+        autonomousState = AutonomousState.BACK_UP;
         launchState = LaunchState.IDLE;
 
 
@@ -311,6 +312,13 @@ public class StarterBotAuto extends OpMode
              * "false" condition means that we are continuing to call the function every loop,
              * allowing it to cycle through and continue the process of launching the first ball.
              */
+            case BACK_UP:
+                if(drive(DRIVE_SPEED, -6, DistanceUnit.INCH, 1)){
+                    leftDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                    rightDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                    autonomousState = AutonomousState.LAUNCH;
+                }
+                break;
             case LAUNCH:
                 launch(true);
                 autonomousState = AutonomousState.WAIT_FOR_LAUNCH;
@@ -336,23 +344,23 @@ public class StarterBotAuto extends OpMode
                         leftDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
                         rightDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
                         launcher.setVelocity(0);
-                        autonomousState = AutonomousState.DRIVING_AWAY_FROM_GOAL;
+                        autonomousState = AutonomousState.ROTATING;
                     }
                 }
                 break;
 
-            case DRIVING_AWAY_FROM_GOAL:
-                /*
-                 * This is another function that returns a boolean. This time we return "true" if
-                 * the robot has been within a tolerance of the target position for "holdSeconds."
-                 * Once the function returns "true" we reset the encoders again and move on.
-                 */
-                if(drive(DRIVE_SPEED, -4, DistanceUnit.INCH, 1)){
-                    leftDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                    rightDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                    autonomousState = AutonomousState.ROTATING;
-                }
-                break;
+//            case DRIVING_AWAY_FROM_GOAL:
+//                /*
+//                 * This is another function that returns a boolean. This time we return "true" if
+//                 * the robot has been within a tolerance of the target position for "holdSeconds."
+//                 * Once the function returns "true" we reset the encoders again and move on.
+//                 */
+//                if(drive(DRIVE_SPEED, -4, DistanceUnit.INCH, 1)){
+//                    leftDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+//                    rightDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+//                    autonomousState = AutonomousState.ROTATING;
+//                }
+//                break;
 
             case ROTATING:
                 if(alliance == Alliance.RED){
