@@ -31,6 +31,7 @@ package org.firstinspires.ftc.teamcode;/*
  */
 
 import static com.qualcomm.robotcore.hardware.DcMotor.ZeroPowerBehavior.BRAKE;
+
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.CRServo;
@@ -74,8 +75,8 @@ public class StarterBotAuto extends OpMode
      * velocity. Here we are setting the target and minimum velocity that the launcher should run
      * at. The minimum velocity is a threshold for determining when to fire.
      */
-    final double LAUNCHER_TARGET_VELOCITY = 1225;
-    final double LAUNCHER_MIN_VELOCITY = 1100;
+    final double LAUNCHER_TARGET_VELOCITY = 1625;
+    final double LAUNCHER_MIN_VELOCITY = 1515;
 
     /*
      * The number of seconds that we wait between each of our 3 shots from the launcher. This
@@ -102,16 +103,16 @@ public class StarterBotAuto extends OpMode
 
     int shotsToFire = 3; //The number of shots to fire in this auto.
 
-    double robotRotationAngle = 45;
+    double robotRotationAngle = 55;
 
     /*
      * Here we create three timers which we use in different parts of our code. Each of these is an
      * "object," so even though they are all an instance of ElapsedTime(), they count independently
      * from each other.
      */
-    private ElapsedTime shotTimer = new ElapsedTime();
-    private ElapsedTime feederTimer = new ElapsedTime();
-    private ElapsedTime driveTimer = new ElapsedTime();
+    private final ElapsedTime shotTimer = new ElapsedTime();
+    private final ElapsedTime feederTimer = new ElapsedTime();
+    private final ElapsedTime driveTimer = new ElapsedTime();
 
     // Declare OpMode members.
     private DcMotor leftDrive = null;
@@ -155,7 +156,8 @@ public class StarterBotAuto extends OpMode
         DRIVING_AWAY_FROM_GOAL,
         ROTATING,
         DRIVING_OFF_LINE,
-        COMPLETE;
+        DRIVING_FORWARD,
+        COMPLETE
     }
 
     private AutonomousState autonomousState;
@@ -165,13 +167,17 @@ public class StarterBotAuto extends OpMode
      */
     private enum Alliance {
         RED,
-        BLUE;
+        BLUE
     }
-
+    private enum Distance {
+        CLOSE,
+        FAR
+    }
     /*
      * When we create the instance of our enum we can also assign a default state.
      */
     private Alliance alliance = Alliance.RED;
+    private Distance distance = Distance.CLOSE;
 
     /*
      * This code runs ONCE when the driver hits INIT.
@@ -179,7 +185,7 @@ public class StarterBotAuto extends OpMode
     @Override
     public void init() {
         /*
-         * Here we set the first step of our autonomous state machine by setting autoStep = AutoStep.LAUNCH.
+         * Here we set the first step of our autonomous state machine by setting autoStep = AutoStep.LAUNCH.w
          * Later in our code, we will progress through the state machine by moving to other enum members.
          * We do the same for our launcher state machine, setting it to IDLE before we use it later.
          */
@@ -275,10 +281,19 @@ public class StarterBotAuto extends OpMode
         } else if (gamepad1.x) {
             alliance = Alliance.BLUE;
         }
+        if (gamepad1.a) {
+            distance = Distance.FAR;
+        } else if (gamepad1.y) {
+            distance = Distance.CLOSE;
+        }
+
 
         telemetry.addData("Press X", "for BLUE");
         telemetry.addData("Press B", "for RED");
+        telemetry.addData("Press Y", "for FAR");
+        telemetry.addData("Press A", "for CLOSE");
         telemetry.addData("Selected Alliance", alliance);
+        telemetry.addData("Selected Distance", distance);
     }
 
     /*
@@ -303,7 +318,7 @@ public class StarterBotAuto extends OpMode
          * of the members of the enum for a match, since if we find the "break" line in one case,
          * we know our enum isn't reflecting a different state.
          */
-        switch (autonomousState){
+        switch (autonomousState) {
             /*
              * Since the first state of our auto is LAUNCH, this is the first "case" we encounter.
              * This case is very simple. We call our .launch() function with "true" in the parameter.
@@ -313,11 +328,28 @@ public class StarterBotAuto extends OpMode
              * allowing it to cycle through and continue the process of launching the first ball.
              */
             case BACK_UP:
-                if(drive(DRIVE_SPEED, -6, DistanceUnit.INCH, 1)){
-                    leftDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                    rightDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                    autonomousState = AutonomousState.LAUNCH;
+
+                if (distance == Distance.CLOSE) {
+                    if (drive(DRIVE_SPEED, -78, DistanceUnit.INCH, 1)) {
+                        leftDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                        rightDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                        autonomousState = AutonomousState.LAUNCH;
+                    }
+                } else if (distance == Distance.FAR && alliance == Alliance.RED) {
+                    if (drive(DRIVE_SPEED, 48, DistanceUnit.INCH, 1)) {
+                        leftDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                        rightDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                        autonomousState = AutonomousState.ROTATING;
+                    }
+                } else if (distance == Distance.FAR && alliance == Alliance.BLUE) {
+                    if (drive(DRIVE_SPEED, 48, DistanceUnit.INCH, 1)) {
+                        leftDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                        rightDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                        autonomousState = AutonomousState.ROTATING;
+                    }
                 }
+
+
                 break;
             case LAUNCH:
                 launch(true);
@@ -336,15 +368,15 @@ public class StarterBotAuto extends OpMode
                  * state on our state machine. Otherwise, we reset the encoders on our drive motors
                  * and move onto the next state.
                  */
-                if(launch(false)) {
+                if (launch(false)) {
                     shotsToFire -= 1;
-                    if(shotsToFire > 0) {
+                    if (shotsToFire > 0) {
                         autonomousState = AutonomousState.LAUNCH;
                     } else {
                         leftDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
                         rightDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
                         launcher.setVelocity(0);
-                        autonomousState = AutonomousState.ROTATING;
+
                     }
                 }
                 break;
@@ -363,47 +395,21 @@ public class StarterBotAuto extends OpMode
 //                break;
 
             case ROTATING:
-                if(alliance == Alliance.RED){
-                    robotRotationAngle = 45;
-                } else if (alliance == Alliance.BLUE){
-                    robotRotationAngle = -45;
+                if (alliance == Alliance.RED) {
+                    robotRotationAngle = 55;
+                } else if (alliance == Alliance.BLUE) {
+                    robotRotationAngle = -55;
                 }
 
-                if(rotate(ROTATE_SPEED, robotRotationAngle, AngleUnit.DEGREES,1)){
+                if (rotate(ROTATE_SPEED, robotRotationAngle, AngleUnit.DEGREES, 1)) {
                     leftDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
                     rightDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
                     autonomousState = AutonomousState.DRIVING_OFF_LINE;
                 }
                 break;
-
-            case DRIVING_OFF_LINE:
-                if(drive(DRIVE_SPEED, -26, DistanceUnit.INCH, 1)){
-                    autonomousState = AutonomousState.COMPLETE;
-                }
-                break;
         }
-
-        /*
-         * Here is our telemetry that keeps us informed of what is going on in the robot. Since this
-         * part of the code exists outside of our switch statement, it will run once every loop.
-         * No matter what state our robot is in. This is the huge advantage of using state machines.
-         * We can have code inside of our state machine that runs only when necessary, and code
-         * after the last "case" that runs every loop. This means we can avoid a lot of
-         * "copy-and-paste" that non-state machine autonomous routines fall into.
-         */
-        telemetry.addData("AutoState", autonomousState);
-        telemetry.addData("LauncherState", launchState);
-        telemetry.addData("Motor Current Positions", "left (%d), right (%d)",
-                leftDrive.getCurrentPosition(), rightDrive.getCurrentPosition());
-        telemetry.addData("Motor Target Positions", "left (%d), right (%d)",
-                leftDrive.getTargetPosition(), rightDrive.getTargetPosition());
-        telemetry.update();
     }
 
-    /*
-     * This code runs ONCE after the driver hits STOP.
-     */
-    @Override
     public void stop() {
     }
 
