@@ -77,6 +77,8 @@ public class StarterBotAuto extends OpMode
      */
     final double LAUNCHER_TARGET_VELOCITY = 1625;
     final double LAUNCHER_MIN_VELOCITY = 1515;
+    final double LAUNCHER_TARGET_VELOCITY_FAR = 1850;
+    final double LAUNCHER_MIN_VELOCITY_FAR = 1765;
 
     /*
      * The number of seconds that we wait between each of our 3 shots from the launcher. This
@@ -155,6 +157,9 @@ public class StarterBotAuto extends OpMode
         WAIT_FOR_LAUNCH,
         DRIVING_AWAY_FROM_GOAL,
         ROTATING,
+        ROTATING_2,
+        DRIVING_OUT_OF_LAUNCH_ZONE,
+        DRIVING_OUT_OF_LAUNCH_ZONE_FAR,
         DRIVING_OFF_LINE,
         DRIVING_FORWARD,
         COMPLETE
@@ -330,19 +335,19 @@ public class StarterBotAuto extends OpMode
             case BACK_UP:
 
                 if (distance == Distance.CLOSE) {
-                    if (drive(DRIVE_SPEED, -78, DistanceUnit.INCH, 1)) {
+                    if (drive(DRIVE_SPEED, -52, DistanceUnit.INCH, 1)) {
                         leftDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
                         rightDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
                         autonomousState = AutonomousState.LAUNCH;
                     }
                 } else if (distance == Distance.FAR && alliance == Alliance.RED) {
-                    if (drive(DRIVE_SPEED, 48, DistanceUnit.INCH, 1)) {
+                    if (drive(DRIVE_SPEED, 5, DistanceUnit.INCH, 1)) {
                         leftDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
                         rightDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
                         autonomousState = AutonomousState.ROTATING;
                     }
                 } else if (distance == Distance.FAR && alliance == Alliance.BLUE) {
-                    if (drive(DRIVE_SPEED, 48, DistanceUnit.INCH, 1)) {
+                    if (drive(DRIVE_SPEED, 5, DistanceUnit.INCH, 1)) {
                         leftDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
                         rightDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
                         autonomousState = AutonomousState.ROTATING;
@@ -396,15 +401,45 @@ public class StarterBotAuto extends OpMode
 
             case ROTATING:
                 if (alliance == Alliance.RED) {
-                    robotRotationAngle = 55;
+                    robotRotationAngle = 20;
                 } else if (alliance == Alliance.BLUE) {
-                    robotRotationAngle = -55;
+                    robotRotationAngle = -23;
                 }
 
                 if (rotate(ROTATE_SPEED, robotRotationAngle, AngleUnit.DEGREES, 1)) {
                     leftDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
                     rightDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                    autonomousState = AutonomousState.DRIVING_OFF_LINE;
+                    autonomousState = AutonomousState.LAUNCH;
+                }
+                break;
+
+            case ROTATING_2:
+                if (alliance == Alliance.RED) {
+                    robotRotationAngle = -45;
+                } else if (alliance == Alliance.BLUE) {
+                    robotRotationAngle = 45;
+                }
+
+                if (rotate(ROTATE_SPEED, robotRotationAngle, AngleUnit.DEGREES, 1)) {
+                    leftDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                    rightDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                    autonomousState = AutonomousState.DRIVING_OUT_OF_LAUNCH_ZONE;
+                }
+                break;
+
+            case DRIVING_OUT_OF_LAUNCH_ZONE:
+                if(drive(DRIVE_SPEED, -20, DistanceUnit.INCH, 1)){
+                    leftDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                    rightDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                    autonomousState = AutonomousState.ROTATING;
+                }
+                break;
+
+            case DRIVING_OUT_OF_LAUNCH_ZONE_FAR:
+                if(drive(DRIVE_SPEED, 10, DistanceUnit.INCH, 1)){
+                    leftDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                    rightDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                    autonomousState = AutonomousState.COMPLETE;
                 }
                 break;
         }
@@ -430,12 +465,23 @@ public class StarterBotAuto extends OpMode
                 }
                 break;
             case PREPARE:
-                launcher.setVelocity(LAUNCHER_TARGET_VELOCITY);
-                if (launcher.getVelocity() > LAUNCHER_MIN_VELOCITY){
-                    launchState = LaunchState.LAUNCH;
-                    leftFeeder.setPower(1);
-                    rightFeeder.setPower(1);
-                    feederTimer.reset();
+                if (distance == Distance.CLOSE) {
+                    launcher.setVelocity(LAUNCHER_TARGET_VELOCITY);
+                    if (launcher.getVelocity() > LAUNCHER_MIN_VELOCITY){
+                        launchState = LaunchState.LAUNCH;
+                        leftFeeder.setPower(1);
+                        rightFeeder.setPower(1);
+                        feederTimer.reset();
+                    }
+                }
+                else {
+                    launcher.setVelocity(LAUNCHER_TARGET_VELOCITY_FAR);
+                    if (launcher.getVelocity() > LAUNCHER_MIN_VELOCITY_FAR){
+                        launchState = LaunchState.LAUNCH;
+                        leftFeeder.setPower(1);
+                        rightFeeder.setPower(1);
+                        feederTimer.reset();
+                    }
                 }
                 break;
             case LAUNCH:
@@ -445,6 +491,12 @@ public class StarterBotAuto extends OpMode
 
                     if(shotTimer.seconds() > TIME_BETWEEN_SHOTS){
                         launchState = LaunchState.IDLE;
+                        if (distance == Distance.CLOSE) {
+                            autonomousState = AutonomousState.ROTATING_2;
+                        }
+                        else {
+                            autonomousState = AutonomousState.DRIVING_OUT_OF_LAUNCH_ZONE_FAR;
+                        }
                         return true;
                     }
                 }
